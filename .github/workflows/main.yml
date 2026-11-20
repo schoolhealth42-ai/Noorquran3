@@ -2,6 +2,8 @@ name: Build APK
 on:
   push:
   workflow_dispatch:
+env:
+  APP_NAME: "Noorquran2"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,6 +24,7 @@ jobs:
           for z in *.zip; do unzip -q -o "$z" -d _unzipped; done
           P=$(dirname "$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)")
           grep -q kotlin-bom "$P/app/build.gradle.kts" || echo 'dependencies { implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.22")) }' >> "$P/app/build.gradle.kts"
+          sed -i "s|<string name=\"app_name\">[^<]*</string>|<string name=\"app_name\">$APP_NAME</string>|" "$P/app/src/main/res/values/strings.xml"
           echo "PROJ=$P" >> $GITHUB_ENV
       - name: Build
         run: gradle -p "$PROJ" assembleRelease --no-daemon
