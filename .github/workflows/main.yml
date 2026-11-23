@@ -1,34 +1,27 @@
-name: Build APK
+name: Deploy iPhone app
 on:
   push:
   workflow_dispatch:
-env:
-  APP_NAME: "Noorquran2"
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Accept Android licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.10.2"
-      - name: Prepare project
+      - name: Unzip site
         run: |
-          shopt -s nullglob
-          for z in *.zip; do unzip -q -o "$z" -d _unzipped; done
-          P=$(dirname "$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)")
-          grep -q kotlin-bom "$P/app/build.gradle.kts" || echo 'dependencies { implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.22")) }' >> "$P/app/build.gradle.kts"
-          sed -i "s|<string name=\"app_name\">[^<]*</string>|<string name=\"app_name\">$APP_NAME</string>|" "$P/app/src/main/res/values/strings.xml"
-          echo "PROJ=$P" >> $GITHUB_ENV
-      - name: Build
-        run: gradle -p "$PROJ" assembleRelease --no-daemon
-      - uses: actions/upload-artifact@v4
+          mkdir -p site
+          for z in noorquran-iphone*.zip; do unzip -q -o "$z" -d site; done
+          rm -f site/iphone.yml
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          name: NoorQuran-APK
-          path: "**/app/build/outputs/apk/release/*.apk"
+          path: site
+      - id: d
+        uses: actions/deploy-pages@v4
